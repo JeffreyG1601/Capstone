@@ -13,10 +13,13 @@ import java.util.List;
 public class AssetServiceImpl implements AssetService {
 
     private final AssetRepository assetRepository;
+
     public AssetServiceImpl(AssetRepository assetRepository) {
-        this.assetRepository = assetRepository;
-    }
-    @Override
+		super();
+		this.assetRepository = assetRepository;
+	}
+
+	@Override
     public Asset createAsset(Asset asset) {
         return assetRepository.save(asset);
     }
@@ -40,5 +43,20 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public void deleteAsset(Long id) {
         assetRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Asset> getAssetsByType(String type) {
+        return assetRepository.findByAssetType(type);
+    }
+
+    @Override
+    public List<Asset> getAssetsByStatus(String status) {
+        return assetRepository.findByStatus(status);
+    }
+
+    @Override
+    public List<Asset> getAssetsByCustomerId(Long customerId) {
+        return assetRepository.findByAssignedToCustomer_CustomerId(customerId);
     }
 }

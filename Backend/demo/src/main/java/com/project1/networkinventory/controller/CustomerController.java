@@ -12,9 +12,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomerController {
 
-    private final CustomerService customerService = null;
+    // Spring will inject this via the constructor automatically
+    private final CustomerService customerService;
 
-    @PostMapping
+    public CustomerController(CustomerService customerService) {
+		super();
+		this.customerService = customerService;
+	}
+
+	@PostMapping
     public Customer createCustomer(@RequestBody Customer customer) {
         return customerService.createCustomer(customer);
     }

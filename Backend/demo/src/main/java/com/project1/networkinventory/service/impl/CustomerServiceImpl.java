@@ -12,9 +12,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
-    private final CustomerRepository customerRepository = null;
+    // Remove = null — let Spring inject via constructor
+    private final CustomerRepository customerRepository;
 
-    @Override
+    public CustomerServiceImpl(CustomerRepository customerRepository) {
+		super();
+		this.customerRepository = customerRepository;
+	}
+
+	@Override
     public Customer createCustomer(Customer customer) {
         return customerRepository.save(customer);
     }
