@@ -1,8 +1,11 @@
 package com.project1.networkinventory.controller;
 
 import com.project1.networkinventory.model.FiberDistributionHub;
-import com.project1.networkinventory.service.FiberDistributionHubService;
+import com.project1.networkinventory.model.Splitter;
+import com.project1.networkinventory.repository.FiberDistributionHubRepository;
+import com.project1.networkinventory.repository.SplitterRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,31 +14,23 @@ import java.util.List;
 @RequestMapping("/api/fdhs")
 @RequiredArgsConstructor
 public class FiberDistributionHubController {
+    private final FiberDistributionHubRepository fdhRepository;
+    private final SplitterRepository splitterRepository;
 
-    private final FiberDistributionHubService fdhService = null;
+    public FiberDistributionHubController(FiberDistributionHubRepository fdhRepository,
+			SplitterRepository splitterRepository) {
+		super();
+		this.fdhRepository = fdhRepository;
+		this.splitterRepository = splitterRepository;
+	}
 
-    @PostMapping
-    public FiberDistributionHub createFDH(@RequestBody FiberDistributionHub fdh) {
-        return fdhService.createFDH(fdh);
+	@GetMapping
+    public ResponseEntity<List<FiberDistributionHub>> list() {
+        return ResponseEntity.ok(fdhRepository.findAll());
     }
 
-    @GetMapping
-    public List<FiberDistributionHub> getAllFDHs() {
-        return fdhService.getAllFDHs();
-    }
-
-    @GetMapping("/{id}")
-    public FiberDistributionHub getFDHById(@PathVariable Long id) {
-        return fdhService.getFDHById(id);
-    }
-
-    @PutMapping("/{id}")
-    public FiberDistributionHub updateFDH(@PathVariable Long id, @RequestBody FiberDistributionHub fdh) {
-        return fdhService.updateFDH(id, fdh);
-    }
-
-    @DeleteMapping("/{id}")
-    public void deleteFDH(@PathVariable Long id) {
-        fdhService.deleteFDH(id);
+    @GetMapping("/{id}/splitters")
+    public ResponseEntity<List<Splitter>> listSplitters(@PathVariable Long id) {
+        return ResponseEntity.ok(splitterRepository.findByFiberDistributionHub_Id(id));
     }
 }

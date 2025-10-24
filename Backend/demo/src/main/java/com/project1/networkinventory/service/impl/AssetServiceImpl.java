@@ -3,10 +3,12 @@ package com.project1.networkinventory.service.impl;
 import com.project1.networkinventory.model.Asset;
 import com.project1.networkinventory.repository.AssetRepository;
 import com.project1.networkinventory.service.AssetService;
+import com.project1.networkinventory.enums.AssetStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -51,12 +53,17 @@ public class AssetServiceImpl implements AssetService {
     }
 
     @Override
-    public List<Asset> getAssetsByStatus(String status) {
+    public List<Asset> getAssetsByStatus(AssetStatus status) {
         return assetRepository.findByStatus(status);
     }
 
     @Override
     public List<Asset> getAssetsByCustomerId(Long customerId) {
         return assetRepository.findByAssignedToCustomer_CustomerId(customerId);
+    }
+
+    @Override
+    public Optional<Asset> findBySerialNumber(String serialNumber) {
+        return assetRepository.findBySerialNumber(serialNumber);
     }
 }

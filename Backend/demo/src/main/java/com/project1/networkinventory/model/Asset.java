@@ -17,6 +17,8 @@ public class Asset {
     private String assetType; // Should match ENUM values in SQL
 
     private String model;
+
+    @Column(name = "serial_number", unique = true, nullable = false)
     private String serialNumber;
 
     @Enumerated(EnumType.STRING)
