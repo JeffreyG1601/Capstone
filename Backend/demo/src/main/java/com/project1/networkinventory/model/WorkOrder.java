@@ -36,6 +36,60 @@ public class WorkOrder {
     private LocalDateTime scheduledDate;
     private LocalDateTime completedDate;
     private String notes;
-
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
+	public String getWorkType() {
+		return workType;
+	}
+	public void setWorkType(String workType) {
+		this.workType = workType;
+	}
+	public Customer getCustomer() {
+		return customer;
+	}
+	public void setCustomer(Customer customer) {
+		this.customer = customer;
+	}
+	public User getAssignedTo() {
+		return assignedTo;
+	}
+	public void setAssignedTo(User assignedTo) {
+		this.assignedTo = assignedTo;
+	}
+	public Zone getZone() {
+		return zone;
+	}
+	public void setZone(Zone zone) {
+		this.zone = zone;
+	}
+	public WorkOrderStatus getStatus() {
+		return status;
+	}
+	public void setStatus(WorkOrderStatus status) {
+		this.status = status;
+	}
+	public LocalDateTime getScheduledDate() {
+		return scheduledDate;
+	}
+	public void setScheduledDate(LocalDateTime scheduledDate) {
+		this.scheduledDate = scheduledDate;
+	}
+	public LocalDateTime getCompletedDate() {
+		return completedDate;
+	}
+	public void setCompletedDate(LocalDateTime completedDate) {
+		this.completedDate = completedDate;
+	}
+	public String getNotes() {
+		return notes;
+	}
+	public void setNotes(String notes) {
+		this.notes = notes;
+	}
+    
     // Getters and Setters (optional if using Lombok)
 }

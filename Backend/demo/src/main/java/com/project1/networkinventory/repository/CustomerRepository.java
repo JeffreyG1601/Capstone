@@ -2,13 +2,12 @@ package com.project1.networkinventory.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.project1.networkinventory.model.Customer;
+import com.project1.networkinventory.enums.CustomerStatus;
 import java.util.List;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
-    // Find customers by splitter ID
-    List<Customer> findBySplitterSplitterId(Long splitterId);
+    List<Customer> findBySplitter_SplitterId(Long splitterId);
 
-    // Other existing methods
-    List<Customer> findByStatus(String status);
+    List<Customer> findByStatus(CustomerStatus status);
 }

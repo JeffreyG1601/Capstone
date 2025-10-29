@@ -13,17 +13,14 @@ public class Asset {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long assetId;  // Matches BIGINT in SQL
-
+    
     private String assetType; // Should match ENUM values in SQL
 
     private String model;
 
     @Column(name = "serial_number", unique = true, nullable = false)
     private String serialNumber;
-
-    @Enumerated(EnumType.STRING)
-    private AssetStatus status; // Matches SQL ENUM
-
+    private AssetStatus status;
     private String location;
 
     @ManyToOne

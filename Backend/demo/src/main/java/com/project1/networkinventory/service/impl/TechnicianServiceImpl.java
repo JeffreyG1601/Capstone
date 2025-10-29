@@ -1,3 +1,4 @@
+// src/main/java/com/project1/networkinventory/service/impl/TechnicianServiceImpl.java
 package com.project1.networkinventory.service.impl;
 
 import com.project1.networkinventory.model.Technician;
@@ -12,9 +13,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TechnicianServiceImpl implements TechnicianService {
 
-    private final TechnicianRepository repository = null;
+    private final TechnicianRepository repository; // remove '= null' and let Lombok inject
 
-    @Override
+    public TechnicianServiceImpl(TechnicianRepository repository) {
+		super();
+		this.repository = repository;
+	}
+
+	@Override
     public Technician createTechnician(Technician tech) {
         return repository.save(tech);
     }

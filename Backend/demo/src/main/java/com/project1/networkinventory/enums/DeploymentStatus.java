@@ -1,5 +1,9 @@
 package com.project1.networkinventory.enums;
 
 public enum DeploymentStatus {
-    Scheduled, InProgress, Completed, Failed
+    PENDING,
+    IN_PROGRESS,
+    COMPLETED,
+    CANCELLED,
+    SCHEDULED    // add if code references SCHEDULED
 }

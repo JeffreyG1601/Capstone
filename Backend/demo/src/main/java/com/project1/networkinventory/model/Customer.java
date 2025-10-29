@@ -29,7 +29,6 @@ public class Customer {
     @Column(name = "connection_type")
     private ConnectionType connectionType;
 
-    @Enumerated(EnumType.STRING)
     private CustomerStatus status;
 
     @ManyToOne

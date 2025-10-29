@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Optional;
 
 @Service
@@ -29,20 +30,20 @@ public class PlannerServiceImpl implements PlannerService {
     private final TechnicianRepository technicianRepository;
 
     public PlannerServiceImpl(CustomerRepository customerRepository, SplitterRepository splitterRepository,
-			FiberDistributionHubRepository fdhRepository, AssetRepository assetRepository,
-			AssignedAssetRepository assignedAssetRepository, DeploymentTaskRepository deploymentTaskRepository,
-			TechnicianRepository technicianRepository) {
-		super();
-		this.customerRepository = customerRepository;
-		this.splitterRepository = splitterRepository;
-		this.fdhRepository = fdhRepository;
-		this.assetRepository = assetRepository;
-		this.assignedAssetRepository = assignedAssetRepository;
-		this.deploymentTaskRepository = deploymentTaskRepository;
-		this.technicianRepository = technicianRepository;
-	}
+                              FiberDistributionHubRepository fdhRepository, AssetRepository assetRepository,
+                              AssignedAssetRepository assignedAssetRepository, DeploymentTaskRepository deploymentTaskRepository,
+                              TechnicianRepository technicianRepository) {
+        super();
+        this.customerRepository = customerRepository;
+        this.splitterRepository = splitterRepository;
+        this.fdhRepository = fdhRepository;
+        this.assetRepository = assetRepository;
+        this.assignedAssetRepository = assignedAssetRepository;
+        this.deploymentTaskRepository = deploymentTaskRepository;
+        this.technicianRepository = technicianRepository;
+    }
 
-	@Override
+    @Override
     @Transactional
     public OnboardResponse onboardCustomer(OnboardRequest req) throws Exception {
         // Basic validation
@@ -78,7 +79,7 @@ public class PlannerServiceImpl implements PlannerService {
             throw new IllegalStateException("Port already assigned to another customer");
         }
 
-        // 3) Create Customer (status Pending -> will become Ready after assignment)
+        // 3) Create Customer (status READY_FOR_INSTALL -> will become ACTIVE after deployment)
         Customer customer = new Customer();
         customer.setName(req.name);
         customer.setAddress(req.address);
@@ -92,23 +93,24 @@ public class PlannerServiceImpl implements PlannerService {
                 // ignore or keep null
             }
         }
-        customer.setStatus(CustomerStatus.Pending);
+        // Use the correct enum constant
+        customer.setStatus(CustomerStatus.PENDING);
         customer.setSplitter(splitter);
         customer.setAssignedPort(req.assignedPort);
         customer.setCreatedAt(LocalDateTime.now());
         customer = customerRepository.save(customer);
 
-        // 4) Assign assets (ONT, Router) if provided — must be Available
+        // 4) Assign assets (ONT, Router) if provided — must be AVAILABLE
         if (req.ontAssetId != null) {
             Asset ont = assetRepository.findById(req.ontAssetId)
                     .orElseThrow(() -> new IllegalArgumentException("ONT asset not found"));
-            if (!AssetStatus.Available.equals(ont.getStatus())) {
-                throw new IllegalStateException("ONT asset is not Available");
+            if (!AssetStatus.AVAILABLE.equals(ont.getStatus())) {
+                throw new IllegalStateException("ONT asset is not AVAILABLE");
             }
             // assign
             ont.setAssignedToCustomer(customer);
             ont.setAssignedDate(LocalDateTime.now());
-            ont.setStatus(AssetStatus.Assigned);
+            ont.setStatus(AssetStatus.ASSIGNED);
             assetRepository.save(ont);
 
             AssignedAsset aa = new AssignedAsset();
@@ -121,12 +123,12 @@ public class PlannerServiceImpl implements PlannerService {
         if (req.routerAssetId != null) {
             Asset router = assetRepository.findById(req.routerAssetId)
                     .orElseThrow(() -> new IllegalArgumentException("Router asset not found"));
-            if (!AssetStatus.Available.equals(router.getStatus())) {
-                throw new IllegalStateException("Router asset is not Available");
+            if (!AssetStatus.AVAILABLE.equals(router.getStatus())) {
+                throw new IllegalStateException("Router asset is not AVAILABLE");
             }
             router.setAssignedToCustomer(customer);
             router.setAssignedDate(LocalDateTime.now());
-            router.setStatus(AssetStatus.Assigned);
+            router.setStatus(AssetStatus.ASSIGNED);
             assetRepository.save(router);
 
             AssignedAsset aa2 = new AssignedAsset();
@@ -150,13 +152,22 @@ public class PlannerServiceImpl implements PlannerService {
                     .orElseThrow(() -> new IllegalArgumentException("Technician not found"));
             task.setTechnician(tech);
         }
-        task.setStatus(DeploymentStatus.Scheduled);
+        task.setStatus(DeploymentStatus.SCHEDULED);
         task.setScheduledDate(req.scheduledDate != null ? req.scheduledDate : LocalDate.now());
-        task.setNotes("Created by Planner during onboarding");
+
+        // Instead of setting notes as a String, create an InstallationNote and add to task
+        InstallationNote plannerNote = new InstallationNote();
+        plannerNote.setAuthor("Planner");
+        plannerNote.setNote("Created by Planner during onboarding");
+        plannerNote.setTimestamp(LocalDateTime.now());
+        // add note to task (assumes DeploymentTask has addNote method or a notesList collection)
+        task.addNote(plannerNote);
+
         task = deploymentTaskRepository.save(task);
 
-        // 7) Mark customer Active/Ready for deployment - depends on your process; we set Pending -> Active/ReadyForDeployment
-        customer.setStatus(CustomerStatus.Active);
+        // 7) Mark customer as READY_FOR_INSTALL or depending on workflow set ACTIVE
+        // We set to READY_FOR_INSTALL above; if you want to immediately move to ACTIVE, uncomment below:
+        // customer.setStatus(CustomerStatus.ACTIVE);
         customerRepository.save(customer);
 
         return new OnboardResponse(customer.getCustomerId(), task.getTaskId(), "Customer onboarded and task created");

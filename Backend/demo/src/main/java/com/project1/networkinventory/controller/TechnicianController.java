@@ -1,3 +1,4 @@
+// src/main/java/com/project1/networkinventory/controller/TechnicianController.java
 package com.project1.networkinventory.controller;
 
 import com.project1.networkinventory.model.Technician;
@@ -12,9 +13,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TechnicianController {
 
-    private final TechnicianService technicianService = null;
+    private final TechnicianService technicianService; // removed '= null'
 
-    @PostMapping
+    public TechnicianController(TechnicianService technicianService) {
+		super();
+		this.technicianService = technicianService;
+	}
+
+	@PostMapping
     public Technician createTechnician(@RequestBody Technician technician) {
         return technicianService.createTechnician(technician);
     }

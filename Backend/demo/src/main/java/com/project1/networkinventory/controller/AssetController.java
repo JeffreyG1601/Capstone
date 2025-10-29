@@ -1,6 +1,8 @@
+// com.project1.networkinventory.controller.AssetController.java
 package com.project1.networkinventory.controller;
 
-import com.project1.networkinventory.enums.AssetStatus;
+import com.project1.networkinventory.dto.AssetDTO;
+import com.project1.networkinventory.mapper.AssetMapper;
 import com.project1.networkinventory.model.Asset;
 import com.project1.networkinventory.service.AssetService;
 import lombok.RequiredArgsConstructor;
@@ -10,26 +12,25 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/assets")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173")
-
 public class AssetController {
 
     private final AssetService assetService;
 
     public AssetController(AssetService assetService) {
-		super();
-		this.assetService = assetService;
-	}
+        this.assetService = assetService;
+    }
 
-	/**
-     * Create a new asset. If an asset with same serialNumber exists, respond 409 Conflict.
-     */
     @PostMapping
-    public ResponseEntity<?> createAsset(@RequestBody Asset asset) {
+    public ResponseEntity<?> createAsset(@RequestBody AssetDTO assetDto) {
+        // map to entity
+        Asset asset = AssetMapper.toEntity(assetDto);
+
         if (asset.getSerialNumber() != null) {
             Optional<Asset> existing = assetService.findBySerialNumber(asset.getSerialNumber());
             if (existing.isPresent()) {
@@ -37,87 +38,72 @@ public class AssetController {
                         .body("Asset with serialNumber " + asset.getSerialNumber() + " already exists.");
             }
         }
+
         Asset created = assetService.createAsset(asset);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(AssetMapper.toDto(created));
     }
 
-    /**
-     * Get all assets. (Simple list endpoint per current SRS)
-     */
     @GetMapping
-    public ResponseEntity<List<Asset>> getAllAssets() {
+    public ResponseEntity<List<AssetDTO>> getAllAssets() {
         List<Asset> list = assetService.getAllAssets();
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(AssetMapper.toDtos(list));
     }
 
-    /**
-     * Get asset by id, 404 if not found.
-     */
     @GetMapping("/{id}")
-    public ResponseEntity<Asset> getAssetById(@PathVariable Long id) {
+    public ResponseEntity<AssetDTO> getAssetById(@PathVariable Long id) {
         Asset a = assetService.getAssetById(id);
-        return a == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(a);
+        return a == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(AssetMapper.toDto(a));
     }
 
-    /**
-     * Update (replace) asset by id.
-     */
     @PutMapping("/{id}")
-    public ResponseEntity<Asset> updateAsset(@PathVariable Long id, @RequestBody Asset asset) {
-        // Optional: protect serial number uniqueness on update
+    public ResponseEntity<?> updateAsset(@PathVariable Long id, @RequestBody AssetDTO assetDto) {
+        Asset asset = AssetMapper.toEntity(assetDto);
+
         if (asset.getSerialNumber() != null) {
             Optional<Asset> existing = assetService.findBySerialNumber(asset.getSerialNumber());
             if (existing.isPresent() && !existing.get().getAssetId().equals(id)) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Serial number already used by another asset.");
             }
         }
+
         Asset updated = assetService.updateAsset(id, asset);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(AssetMapper.toDto(updated));
     }
 
-    /**
-     * Delete asset by id.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAsset(@PathVariable Long id) {
         assetService.deleteAsset(id);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Find assets by type (e.g., "ONT", "Router").
-     */
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<Asset>> getAssetsByType(@PathVariable String type) {
+    public ResponseEntity<List<AssetDTO>> getAssetsByType(@PathVariable String type) {
         List<Asset> list = assetService.getAssetsByType(type);
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(AssetMapper.toDtos(list));
     }
 
-    /**
-     * Find assets by status using the AssetStatus enum (Available, Assigned, Faulty, Retired).
-     * Example: GET /api/assets/status/Available
-     */
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<Asset>> getAssetsByStatus(@PathVariable AssetStatus status) {
-        List<Asset> list = assetService.getAssetsByStatus(status);
-        return ResponseEntity.ok(list);
+    public ResponseEntity<List<AssetDTO>> getAssetsByStatus(@PathVariable String status) {
+        // Use enum parsing tolerant method
+        // If you want to accept AssetStatus path variable directly, change argument to AssetStatus and rely on @JsonCreator (but path var binding is simpler via string)
+        com.project1.networkinventory.enums.AssetStatus s =
+            com.project1.networkinventory.enums.AssetStatus.fromString(status);
+        if (s == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        List<Asset> list = assetService.getAssetsByStatus(s);
+        return ResponseEntity.ok(AssetMapper.toDtos(list));
     }
 
-    /**
-     * Find assets assigned to a given customer id.
-     */
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<Asset>> getAssetsByCustomer(@PathVariable Long customerId) {
+    public ResponseEntity<List<AssetDTO>> getAssetsByCustomer(@PathVariable Long customerId) {
         List<Asset> list = assetService.getAssetsByCustomerId(customerId);
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(AssetMapper.toDtos(list));
     }
 
-    /**
-     * Lookup asset by serial number.
-     */
     @GetMapping("/serial/{serial}")
-    public ResponseEntity<Asset> getAssetBySerial(@PathVariable String serial) {
+    public ResponseEntity<AssetDTO> getAssetBySerial(@PathVariable String serial) {
         Optional<Asset> opt = assetService.findBySerialNumber(serial);
-        return opt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return opt.map(a -> ResponseEntity.ok(AssetMapper.toDto(a))).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

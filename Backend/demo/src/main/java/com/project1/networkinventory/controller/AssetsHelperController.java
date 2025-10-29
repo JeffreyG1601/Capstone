@@ -26,7 +26,7 @@ public class AssetsHelperController {
         List<Asset> byType = assetRepository.findByAssetType(type);
         // filter by status Available
         List<Asset> available = byType.stream()
-                .filter(a -> a.getStatus() != null && a.getStatus().equals(AssetStatus.Available))
+                .filter(a -> a.getStatus() != null && a.getStatus().equals(AssetStatus.AVAILABLE))
                 .toList();
         return ResponseEntity.ok(available);
     }

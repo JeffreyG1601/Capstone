@@ -1,14 +1,8 @@
+// src/main/java/com/project1/networkinventory/repository/AuditLogRepository.java
 package com.project1.networkinventory.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import com.project1.networkinventory.model.AuditLog;
-import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
-
-    // Traverse the user object properly
-    List<AuditLog> findByUserUserId(Long userId);
-
-    // Match the actual field name in AuditLog
-    List<AuditLog> findByActionTypeContainingIgnoreCase(String actionType);
-}
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long>, JpaSpecificationExecutor<AuditLog> { }
