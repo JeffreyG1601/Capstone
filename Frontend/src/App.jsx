@@ -14,7 +14,11 @@ import AdminAuditController from "./controllers/AdminAuditController";
 import AdminRolesController from "./controllers/AdminRolesController";
 import "./styles.css";
 
-// Technician route handling
+// Auth & pages
+import ProtectedRoute from "./components/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
+
+// Technician route handling (kept identical)
 function TechnicianRoute() {
   const { id } = useParams();
   const normalizedId = id ? id.toString().toLowerCase() : null;
@@ -62,18 +66,75 @@ function AppRoutes() {
 
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<Navigate to="/inventory" replace />} />
-          <Route path="/inventory" element={<InventoryDashboard />} />
-          <Route path="/inventory/add" element={<InventoryAddView />} />
-          <Route path="/inventory/add/asset" element={<AddAssetPage />} />
-          <Route path="/inventory/add/headend" element={<AddHeadendPage />} />
-          <Route path="/inventory/add/fdh" element={<AddFDHPage />} />
-          <Route path="/inventory/add/splitter" element={<AddSplitterPage />} />
-          <Route path="/planner" element={<PlannerDashboard />} />
-          <Route path="/technician/:id" element={<TechnicianRoute />} />
-          <Route path="/technician" element={<TechnicianRoute />} />
-          <Route path="/admin/audit" element={<AdminAuditController />} />
-          <Route path="/admin/roles" element={<AdminRolesController />} />
+          {/* public */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* protected */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Navigate to="/inventory" replace />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/inventory" element={
+            <ProtectedRoute>
+              <InventoryDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/add" element={
+            <ProtectedRoute>
+              <InventoryAddView />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/add/asset" element={
+            <ProtectedRoute>
+              <AddAssetPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/add/headend" element={
+            <ProtectedRoute>
+              <AddHeadendPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/add/fdh" element={
+            <ProtectedRoute>
+              <AddFDHPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory/add/splitter" element={
+            <ProtectedRoute>
+              <AddSplitterPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/planner" element={
+            <ProtectedRoute>
+              <PlannerDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/technician/:id" element={
+            <ProtectedRoute>
+              <TechnicianRoute />
+            </ProtectedRoute>
+          } />
+          <Route path="/technician" element={
+            <ProtectedRoute>
+              <TechnicianRoute />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/audit" element={
+            <ProtectedRoute>
+              <AdminAuditController />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/roles" element={
+            <ProtectedRoute>
+              <AdminRolesController />
+            </ProtectedRoute>
+          } />
+
           <Route
             path="*"
             element={
@@ -90,6 +151,6 @@ function AppRoutes() {
 }
 
 export default function App() {
-  // Providers (Router + QueryClientProvider) are set in src/main.jsx — App should only render routes
+  // Providers (Router + QueryClientProvider) are now set in src/main.jsx — App should only render routes
   return <AppRoutes />;
 }

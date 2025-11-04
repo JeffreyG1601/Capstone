@@ -11,20 +11,25 @@ const instance = axios.create({
   },
 });
 
-// request interceptor (optional)
-instance.interceptors.request.use((cfg) => {
-  // attach auth header if you have tokens, e.g.
-  // const token = localStorage.getItem('authToken');
-  // if (token) cfg.headers.Authorization = `Bearer ${token}`;
-  return cfg;
-}, (err) => Promise.reject(err));
+// request interceptor: attach token from localStorage if present
+instance.interceptors.request.use(
+  (cfg) => {
+    try {
+      const token = localStorage.getItem("nims_token") || localStorage.getItem("authToken");
+      if (token) cfg.headers.Authorization = `Bearer ${token}`;
+    } catch (e) {
+      // ignore
+    }
+    return cfg;
+  },
+  (err) => Promise.reject(err)
+);
 
 // response interceptor (optional - better error messages)
 instance.interceptors.response.use(
   (res) => res,
   (err) => {
-    // map axios error to something friendly for UI
-    if (err.response && err.response.data) {
+    if (err && err.response && err.response.data) {
       return Promise.reject(err.response.data);
     }
     return Promise.reject(err.message || "Network error");

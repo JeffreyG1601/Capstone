@@ -3,7 +3,7 @@ package com.project1.networkinventory.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import com.project1.networkinventory.enums.Role;
-
+import com.project1.networkinventory.converter.RoleConverter;
 @Entity
 @Table(name = "user")
 public class User {
@@ -19,10 +19,11 @@ public class User {
 
     @Column(name = "user_email")
     private String userEmail; // Added to support existsByUserEmail
+ // in your User entity
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = RoleConverter.class)
+    @Column(name = "role")
     private Role role;
-
     private LocalDateTime lastLogin;
 
     // ----- Getters and Setters -----

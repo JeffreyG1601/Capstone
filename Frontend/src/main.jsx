@@ -11,6 +11,9 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
+// Auth
+import { AuthProvider } from "./contexts/AuthContext";
+
 // Create single QueryClient instance for the app
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,9 +31,12 @@ root.render(
   <React.StrictMode>
     {/* QueryClientProvider at the very top so all children have access */}
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      {/* AuthProvider wraps the router so any page can read auth state */}
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </React.StrictMode>
