@@ -1,5 +1,6 @@
 package com.project1.networkinventory.controller;
 
+import com.project1.networkinventory.enums.CustomerStatus;
 import com.project1.networkinventory.model.Customer;
 import com.project1.networkinventory.service.CustomerService;
 import lombok.RequiredArgsConstructor;
@@ -10,9 +11,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
 public class CustomerController {
 
-    // Spring will inject this via the constructor automatically
     private final CustomerService customerService;
 
     public CustomerController(CustomerService customerService) {
@@ -43,5 +44,11 @@ public class CustomerController {
     @DeleteMapping("/{id}")
     public void deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
+    }
+
+    // ✅ Added endpoint for frontend “pending customers” tab
+    @GetMapping("/pending")
+    public List<Customer> getPendingCustomers() {
+        return customerService.getCustomersByStatus(CustomerStatus.PENDING);
     }
 }

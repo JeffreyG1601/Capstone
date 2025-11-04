@@ -1,123 +1,100 @@
-// src/main/java/com/project1/networkinventory/controller/PlannerController.java
 package com.project1.networkinventory.controller;
 
 import com.project1.networkinventory.dto.OnboardRequest;
-import com.project1.networkinventory.model.*;
-import com.project1.networkinventory.repository.*;
-import com.project1.networkinventory.enums.DeploymentStatus;
+import com.project1.networkinventory.dto.OnboardResponse;
+import com.project1.networkinventory.enums.CustomerStatus;
+import com.project1.networkinventory.model.Asset;
+import com.project1.networkinventory.model.Customer;
+import com.project1.networkinventory.repository.AssetRepository;
+import com.project1.networkinventory.repository.CustomerRepository;
 import com.project1.networkinventory.service.PlannerService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/planner")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
 public class PlannerController {
 
-    private final FiberDistributionHubRepository fdhRepo;
-    private final SplitterRepository splitterRepo;
-    private final CustomerRepository customerRepo;
-    private final AssetRepository assetRepo;
-    private final DeploymentTaskRepository taskRepo;
+    private final PlannerService plannerService;
+    private final CustomerRepository customerRepository;
+    private final AssetRepository assetRepository;
 
-    public PlannerController(FiberDistributionHubRepository fdhRepo,
-                             SplitterRepository splitterRepo,
-                             CustomerRepository customerRepo,
-                             AssetRepository assetRepo,
-                             DeploymentTaskRepository taskRepo) {
-        this.fdhRepo = fdhRepo;
-        this.splitterRepo = splitterRepo;
-        this.customerRepo = customerRepo;
-        this.assetRepo = assetRepo;
-        this.taskRepo = taskRepo;
+    public PlannerController(PlannerService plannerService, CustomerRepository customerRepository, AssetRepository assetRepository) {
+        super();
+        this.plannerService = plannerService;
+        this.customerRepository = customerRepository;
+        this.assetRepository = assetRepository;
     }
 
-    @GetMapping("/fdhs")
-    public List<FiberDistributionHub> listFdhs() {
-        return fdhRepo.findAll();
-    }
-
-    @GetMapping("/fdhs/{fdhId}/splitters")
-    public List<Splitter> listSplitters(@PathVariable Long fdhId) {
-        return splitterRepo.findByFiberDistributionHub_Id(fdhId);
+    // Main onboarding endpoint (controller is NOT transactional)
+    @PostMapping("/onboard")
+    public ResponseEntity<?> onboard(@RequestBody OnboardRequest req) {
+        try {
+            OnboardResponse resp = plannerService.onboardCustomer(req);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body("Onboard failed: " + e.getMessage());
+        }
     }
 
     /**
-     * Onboard a customer:
-     * - create customer record
-     * - verify splitter + free port
-     * - assign ONT/router assets if serials provided
-     * - create deployment task assigned to technician
+     * GET /api/planner/pending
+     * Returns customers that should appear in "Pending":
+     *  - status == PENDING
+     *  - OR missing required fields (name blank/null, splitter null, assignedPort null)
+     *  - OR missing ONT or Router assignment (even if status != PENDING)
      */
-    @PostMapping("/onboard")
-    @Transactional
-    public ResponseEntity<?> onboard(@RequestBody OnboardRequest req) {
-        // basic validation
-        if (req.getFdhId() == null || req.getSplitterId() == null) {
-            return ResponseEntity.badRequest().body("fdhId and splitterId required");
-        }
+    @GetMapping("/pending")
+    public ResponseEntity<List<Map<String,Object>>> listPendingCustomers() {
+        List<Customer> all = customerRepository.findAll();
 
-        Optional<Splitter> spOpt = splitterRepo.findById(req.getSplitterId());
-        if (spOpt.isEmpty()) return ResponseEntity.badRequest().body("Splitter not found");
-        Splitter splitter = spOpt.get();
+        List<Customer> filtered = all.stream()
+            .filter(c -> {
+                if (c == null) return false;
+                if (c.getStatus() == CustomerStatus.PENDING) return true;
+                if (c.getName() == null || c.getName().isBlank()) return true;
+                if (c.getSplitter() == null) return true;
+                if (c.getAssignedPort() == null) return true;
 
-        // Ensure port availability
-        if (splitter.getUsedPorts() >= splitter.getPortCapacity()) {
-            return ResponseEntity.status(409).body("No free ports on splitter");
-        }
+                // If customer lacks an ONT or lacks a Router then surface in pending list.
+                boolean hasOnt = assetRepository.findByAssignedToCustomer_CustomerId(c.getCustomerId())
+                        .stream()
+                        .anyMatch(a -> a.getAssetType() != null && a.getAssetType().equalsIgnoreCase("ONT"));
+                boolean hasRouter = assetRepository.findByAssignedToCustomer_CustomerId(c.getCustomerId())
+                        .stream()
+                        .anyMatch(a -> a.getAssetType() != null && a.getAssetType().equalsIgnoreCase("ROUTER"));
 
-        // create customer
-        Customer c = new Customer();
-        c.setName(req.getName());
-        c.setAddress(req.getAddress());
-        c.setNeighborhood(req.getNeighborhood());
-        c.setPlan(req.getPlan());
-        c.setConnectionType(req.getConnectionType());
-        c.setStatus(com.project1.networkinventory.enums.CustomerStatus.PENDING);
-        c.setSplitter(splitter);
-        c.setAssignedPort(req.getAssignedPort());
-        c.setCreatedAt(LocalDateTime.now());
-        Customer saved = customerRepo.save(c);
+                if (!hasOnt || !hasRouter) return true;
 
-        // increment used ports on splitter
-        splitter.setUsedPorts(splitter.getUsedPorts() + 1);
-        splitterRepo.save(splitter);
+                return false;
+            })
+            .collect(Collectors.toList());
 
-        // assign assets if serials provided (optional)
-        if (req.getOntAssetId() != null) {
-            Optional<Asset> ontOpt = assetRepo.findById(req.getOntAssetId());
-            ontOpt.ifPresent(a -> { a.setAssignedToCustomer(saved); a.setStatus(com.project1.networkinventory.enums.AssetStatus.ASSIGNED); assetRepo.save(a); });
-        }
-        if (req.getRouterAssetId() != null) {
-            Optional<Asset> rOpt = assetRepo.findById(req.getRouterAssetId());
-            rOpt.ifPresent(a -> { a.setAssignedToCustomer(saved); a.setStatus(com.project1.networkinventory.enums.AssetStatus.ASSIGNED); assetRepo.save(a); });
-        }
+        List<Map<String,Object>> out = filtered.stream().map(c -> {
+            Map<String,Object> m = new HashMap<>();
+            m.put("customerId", c.getCustomerId());
+            m.put("name", c.getName());
+            m.put("address", c.getAddress());
+            m.put("neighborhood", c.getNeighborhood());
+            m.put("plan", c.getPlan());
+            m.put("connectionType", c.getConnectionType() == null ? null : c.getConnectionType().name());
+            m.put("status", c.getStatus() == null ? null : c.getStatus().name());
+            m.put("splitterId", c.getSplitter() == null ? null : c.getSplitter().getSplitterId());
+            m.put("assignedPort", c.getAssignedPort());
+            return m;
+        }).collect(Collectors.toList());
 
-        // create deployment task
-        DeploymentTask t = new DeploymentTask();
-        t.setTitle("Onboard - " + saved.getName());
-        t.setCustomer(saved);
-        if (req.getTechnicianId() != null) {
-            Technician tech = new Technician();
-            tech.setTechnicianId(req.getTechnicianId());
-            t.setTechnician(tech); // set only id to avoid loading
-        }
-        t.setScheduledDate(req.getScheduledDate());
-        t.setStatus(DeploymentStatus.SCHEDULED);
-        t.setCreatedAt(LocalDateTime.now());
-        DeploymentTask savedTask = taskRepo.save(t);
-
-        // response minimal
-        return ResponseEntity.ok(
-                new java.util.HashMap<String, Object>() {{
-                    put("customerId", saved.getCustomerId());
-                    put("deploymentTaskId", savedTask.getTaskId());
-                    put("message", "Onboard created and task scheduled");
-                }}
-        );
+        return ResponseEntity.ok(out);
     }
 }

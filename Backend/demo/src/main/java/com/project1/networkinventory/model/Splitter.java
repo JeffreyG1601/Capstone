@@ -9,7 +9,6 @@ import lombok.Data;
 public class Splitter {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "splitter_id")
     private Long splitterId; // CHANGED to Long ✅
 

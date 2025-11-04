@@ -14,8 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -46,130 +44,130 @@ public class PlannerServiceImpl implements PlannerService {
     @Override
     @Transactional
     public OnboardResponse onboardCustomer(OnboardRequest req) throws Exception {
-        // Basic validation
+
         if (req == null) throw new IllegalArgumentException("Request is null");
-        if (req.name == null || req.name.isBlank()) throw new IllegalArgumentException("Customer name required");
-        if (req.splitterId == null) throw new IllegalArgumentException("Splitter selection required");
+        if (req.getName() == null || req.getName().isBlank())
+            throw new IllegalArgumentException("Customer name required");
+        if (req.getSplitterId() == null)
+            throw new IllegalArgumentException("Splitter selection required");
 
-        // 1) Load splitter and FDH
-        Splitter splitter = splitterRepository.findById(req.splitterId)
+        // 1. Load splitter + FDH
+        Splitter splitter = splitterRepository.findById(req.getSplitterId())
                 .orElseThrow(() -> new IllegalArgumentException("Splitter not found"));
+
         FiberDistributionHub fdh = splitter.getFiberDistributionHub();
-        if (fdh == null) {
-            if (req.fdhId != null) {
-                fdh = fdhRepository.findById(req.fdhId).orElseThrow(() -> new IllegalArgumentException("FDH not found"));
-            } else {
-                throw new IllegalArgumentException("Splitter has no FDH and none provided");
-            }
+        if (fdh == null && req.getFdhId() != null) {
+            fdh = fdhRepository.findById(req.getFdhId())
+                    .orElseThrow(() -> new IllegalArgumentException("FDH not found"));
+        } else if (fdh == null) {
+            throw new IllegalArgumentException("Splitter has no FDH and none provided");
         }
 
-        // 2) Check assignedPort vs capacity
-        if (req.assignedPort == null) throw new IllegalArgumentException("Assigned port is required");
-        if (req.assignedPort <= 0 || req.assignedPort > splitter.getPortCapacity()) {
-            throw new IllegalArgumentException("Assigned port is out of range for this splitter");
-        }
+        // 2. Validate assignedPort
+        if (req.getAssignedPort() == null)
+            throw new IllegalArgumentException("Assigned port is required");
+        if (req.getAssignedPort() <= 0 || req.getAssignedPort() > splitter.getPortCapacity())
+            throw new IllegalArgumentException("Assigned port out of range");
 
-        // ensure port not already used by a customer - check Customer table for same splitter/port
-        boolean portInUse = customerRepository.findAll().stream()
-                .anyMatch(c -> c.getSplitter() != null
-                        && c.getSplitter().getSplitterId().equals(splitter.getSplitterId())
-                        && c.getAssignedPort() != null
-                        && c.getAssignedPort().equals(req.assignedPort));
-        if (portInUse) {
+        if (customerRepository.existsBySplitter_SplitterIdAndAssignedPort(
+                splitter.getSplitterId(), req.getAssignedPort())) {
             throw new IllegalStateException("Port already assigned to another customer");
         }
 
-        // 3) Create Customer (status READY_FOR_INSTALL -> will become ACTIVE after deployment)
+        // 3. Create Customer
         Customer customer = new Customer();
-        customer.setName(req.name);
-        customer.setAddress(req.address);
-        customer.setNeighborhood(req.neighborhood);
-        customer.setPlan(req.plan);
-        // connectionType string to enum mapping if needed; currently stored as ConnectionType enum on Customer
-        if (req.connectionType != null) {
-            try {
-                customer.setConnectionType(com.project1.networkinventory.enums.ConnectionType.valueOf(req.connectionType));
-            } catch (Exception ex) {
-                // ignore or keep null
-            }
-        }
-        // Use the correct enum constant
+        customer.setName(req.getName());
+        customer.setAddress(req.getAddress());
+        customer.setNeighborhood(req.getNeighborhood());
+        customer.setPlan(req.getPlan());
+        customer.setConnectionType(req.getConnectionType());
         customer.setStatus(CustomerStatus.PENDING);
         customer.setSplitter(splitter);
-        customer.setAssignedPort(req.assignedPort);
+        customer.setAssignedPort(req.getAssignedPort());
         customer.setCreatedAt(LocalDateTime.now());
         customer = customerRepository.save(customer);
 
-        // 4) Assign assets (ONT, Router) if provided — must be AVAILABLE
-        if (req.ontAssetId != null) {
-            Asset ont = assetRepository.findById(req.ontAssetId)
-                    .orElseThrow(() -> new IllegalArgumentException("ONT asset not found"));
-            if (!AssetStatus.AVAILABLE.equals(ont.getStatus())) {
-                throw new IllegalStateException("ONT asset is not AVAILABLE");
-            }
-            // assign
-            ont.setAssignedToCustomer(customer);
-            ont.setAssignedDate(LocalDateTime.now());
-            ont.setStatus(AssetStatus.ASSIGNED);
-            assetRepository.save(ont);
+        // 4. Assign ONT asset (only if provided AND customer has no ONT)
+        if (req.getOntAssetId() != null) {
+            boolean customerHasOnt = assetRepository.findByAssignedToCustomer_CustomerId(customer.getCustomerId())
+                    .stream()
+                    .anyMatch(a -> a.getAssetType() != null && a.getAssetType().equalsIgnoreCase("ONT"));
 
-            AssignedAsset aa = new AssignedAsset();
-            aa.setAsset(ont);
-            aa.setCustomer(customer);
-            aa.setAssignedOn(LocalDateTime.now());
-            assignedAssetRepository.save(aa);
+            if (!customerHasOnt) {
+                Asset ont = assetRepository.findById(req.getOntAssetId())
+                        .orElseThrow(() -> new IllegalArgumentException("ONT asset not found"));
+                if (ont.getStatus() != AssetStatus.AVAILABLE)
+                    throw new IllegalStateException("ONT asset is not AVAILABLE");
+
+                ont.setAssignedToCustomer(customer);
+                ont.setAssignedDate(LocalDateTime.now());
+                ont.setStatus(AssetStatus.ASSIGNED);
+                assetRepository.save(ont);
+
+                AssignedAsset link = new AssignedAsset();
+                link.setAsset(ont);
+                link.setCustomer(customer);
+                link.setAssignedOn(LocalDateTime.now());
+                assignedAssetRepository.save(link);
+            }
         }
 
-        if (req.routerAssetId != null) {
-            Asset router = assetRepository.findById(req.routerAssetId)
-                    .orElseThrow(() -> new IllegalArgumentException("Router asset not found"));
-            if (!AssetStatus.AVAILABLE.equals(router.getStatus())) {
-                throw new IllegalStateException("Router asset is not AVAILABLE");
-            }
-            router.setAssignedToCustomer(customer);
-            router.setAssignedDate(LocalDateTime.now());
-            router.setStatus(AssetStatus.ASSIGNED);
-            assetRepository.save(router);
+        // 5. Assign Router asset (only if provided AND customer has no Router)
+        if (req.getRouterAssetId() != null) {
+            boolean customerHasRouter = assetRepository.findByAssignedToCustomer_CustomerId(customer.getCustomerId())
+                    .stream()
+                    .anyMatch(a -> a.getAssetType() != null && a.getAssetType().equalsIgnoreCase("ROUTER"));
 
-            AssignedAsset aa2 = new AssignedAsset();
-            aa2.setAsset(router);
-            aa2.setCustomer(customer);
-            aa2.setAssignedOn(LocalDateTime.now());
-            assignedAssetRepository.save(aa2);
+            if (!customerHasRouter) {
+                Asset router = assetRepository.findById(req.getRouterAssetId())
+                        .orElseThrow(() -> new IllegalArgumentException("Router asset not found"));
+                if (router.getStatus() != AssetStatus.AVAILABLE)
+                    throw new IllegalStateException("Router asset is not AVAILABLE");
+
+                router.setAssignedToCustomer(customer);
+                router.setAssignedDate(LocalDateTime.now());
+                router.setStatus(AssetStatus.ASSIGNED);
+                assetRepository.save(router);
+
+                AssignedAsset link2 = new AssignedAsset();
+                link2.setAsset(router);
+                link2.setCustomer(customer);
+                link2.setAssignedOn(LocalDateTime.now());
+                assignedAssetRepository.save(link2);
+            }
         }
 
-        // 5) increment splitter.usedPorts (reflect capacity usage)
-        Integer used = splitter.getUsedPorts();
-        if (used == null) used = 0;
-        splitter.setUsedPorts(used + 1);
+        // 6. Update splitter port usage
+        splitter.setUsedPorts((splitter.getUsedPorts() == null ? 0 : splitter.getUsedPorts()) + 1);
         splitterRepository.save(splitter);
 
-        // 6) Create DeploymentTask and assign to technician if provided
+        // 7. Create Deployment Task
         DeploymentTask task = new DeploymentTask();
         task.setCustomer(customer);
-        if (req.technicianId != null) {
-            Technician tech = technicianRepository.findById(req.technicianId)
+
+        if (req.getTechnicianId() != null) {
+            Technician tech = technicianRepository.findById(req.getTechnicianId())
                     .orElseThrow(() -> new IllegalArgumentException("Technician not found"));
             task.setTechnician(tech);
         }
+
         task.setStatus(DeploymentStatus.SCHEDULED);
-        task.setScheduledDate(req.scheduledDate != null ? req.scheduledDate : LocalDate.now());
+        task.setScheduledDate(req.getScheduledDate() != null
+                ? req.getScheduledDate().toLocalDate()
+                : LocalDate.now());
 
-        // Instead of setting notes as a String, create an InstallationNote and add to task
-        InstallationNote plannerNote = new InstallationNote();
-        plannerNote.setAuthor("Planner");
-        plannerNote.setNote("Created by Planner during onboarding");
-        plannerNote.setTimestamp(LocalDateTime.now());
-        // add note to task (assumes DeploymentTask has addNote method or a notesList collection)
-        task.addNote(plannerNote);
+        InstallationNote note = new InstallationNote();
+        note.setAuthor("Planner");
+        note.setNote("Created during onboarding");
+        note.setTimestamp(LocalDateTime.now());
+        task.addNote(note);
 
-        task = deploymentTaskRepository.save(task);
+        deploymentTaskRepository.save(task);
 
-        // 7) Mark customer as READY_FOR_INSTALL or depending on workflow set ACTIVE
-        // We set to READY_FOR_INSTALL above; if you want to immediately move to ACTIVE, uncomment below:
-        // customer.setStatus(CustomerStatus.ACTIVE);
-        customerRepository.save(customer);
-
-        return new OnboardResponse(customer.getCustomerId(), task.getTaskId(), "Customer onboarded and task created");
+        return new OnboardResponse(
+                customer.getCustomerId(),
+                task.getTaskId(),
+                "Customer onboarded and task created successfully"
+        );
     }
 }

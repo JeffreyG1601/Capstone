@@ -2,13 +2,36 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import "./index.css";
+import "./index.css"; // keep if present
 
-const container = document.getElementById("root");
-if (!container) throw new Error("#root not found");
-const root = createRoot(container);
+// Router
+import { BrowserRouter } from "react-router-dom";
+
+// React Query
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+// Create single QueryClient instance for the app
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30, // 30s
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+const root = createRoot(document.getElementById("root"));
+
 root.render(
   <React.StrictMode>
-    <App />
+    {/* QueryClientProvider at the very top so all children have access */}
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   </React.StrictMode>
 );

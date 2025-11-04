@@ -12,7 +12,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AssignedAssetServiceImpl implements AssignedAssetService {
 
-    private final AssignedAssetRepository repository = null;
+    private final AssignedAssetRepository repository;
+
+    // explicit constructor (keeps compatibility)
+    public AssignedAssetServiceImpl(AssignedAssetRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public AssignedAsset assignAsset(AssignedAsset assignedAsset) {

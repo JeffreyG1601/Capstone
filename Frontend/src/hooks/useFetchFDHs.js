@@ -1,7 +1,13 @@
 // src/hooks/useFetchFDHs.js
 import { useQuery } from '@tanstack/react-query'
-import axios from '../api/axiosInstance'
+import axios from '../services/axiosInstance'
 
 export default function useFetchFDHs() {
-  return useQuery(['fdhs'], () => axios.get('/fdhs').then(r => r.data))
+  return useQuery({
+    queryKey: ['fdhs'],
+    queryFn: async () => {
+      const r = await axios.get('/fdhs')
+      return r.data
+    },
+  })
 }

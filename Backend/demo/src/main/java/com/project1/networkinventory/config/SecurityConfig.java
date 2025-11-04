@@ -1,4 +1,4 @@
-package com.project1.networkinventory.config;
+   package com.project1.networkinventory.config;
 
 //Spring Boot 3 / Spring Security 6 style
 import org.springframework.context.annotation.Bean;

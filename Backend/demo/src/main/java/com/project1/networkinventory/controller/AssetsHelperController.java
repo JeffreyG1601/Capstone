@@ -13,6 +13,7 @@ import java.util.List;
 @RequestMapping("/api/assets/helper")
 @RequiredArgsConstructor
 public class AssetsHelperController {
+
     private final AssetRepository assetRepository;
 
     public AssetsHelperController(AssetRepository assetRepository) {
@@ -20,13 +21,18 @@ public class AssetsHelperController {
 		this.assetRepository = assetRepository;
 	}
 
-	// GET /api/assets/helper/available?type=ONT
+	// Default route used by frontend: /api/assets/helper?type=ONT
+    @GetMapping
+    public ResponseEntity<List<Asset>> listAvailableAlias(@RequestParam(name = "type") String type) {
+        return listAvailable(type);
+    }
+
+    // Alternate explicit route: /api/assets/helper/available?type=ONT
     @GetMapping("/available")
     public ResponseEntity<List<Asset>> listAvailable(@RequestParam String type) {
         List<Asset> byType = assetRepository.findByAssetType(type);
-        // filter by status Available
         List<Asset> available = byType.stream()
-                .filter(a -> a.getStatus() != null && a.getStatus().equals(AssetStatus.AVAILABLE))
+                .filter(a -> a.getStatus() == AssetStatus.AVAILABLE)
                 .toList();
         return ResponseEntity.ok(available);
     }

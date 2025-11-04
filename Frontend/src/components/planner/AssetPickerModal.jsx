@@ -1,6 +1,6 @@
 // src/components/planner/AssetPickerModal.jsx
 import React, { useEffect, useState } from 'react'
-import axios from '../../api/axiosInstance'
+import axios from '../../services/axiosInstance'
 
 export default function AssetPickerModal({ onSelect, assetType = 'ONT', isOpen, onClose }) {
   const [assets, setAssets] = useState([])

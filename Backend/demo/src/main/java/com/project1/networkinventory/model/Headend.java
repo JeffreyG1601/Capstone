@@ -13,7 +13,6 @@ import java.util.List;
 public class Headend {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "headend_id")
     private Long id;
 

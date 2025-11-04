@@ -25,7 +25,7 @@ public class Customer {
     private String neighborhood;
     private String plan;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = com.project1.networkinventory.converter.ConnectionTypeConverter.class)
     @Column(name = "connection_type")
     private ConnectionType connectionType;
 

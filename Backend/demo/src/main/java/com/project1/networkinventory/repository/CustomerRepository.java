@@ -10,4 +10,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findBySplitter_SplitterId(Long splitterId);
 
     List<Customer> findByStatus(CustomerStatus status);
+
+    // ✅ Added safe port check method
+    boolean existsBySplitter_SplitterIdAndAssignedPort(Long splitterId, Integer assignedPort);
 }

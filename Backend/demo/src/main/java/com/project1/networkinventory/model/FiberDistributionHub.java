@@ -13,7 +13,6 @@ import java.util.List;
 public class FiberDistributionHub {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "fdh_id")
     private Long id;
 

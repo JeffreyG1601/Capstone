@@ -1,19 +1,27 @@
 // src/App.jsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Link, Navigate, useParams } from "react-router-dom";
+import { Routes, Route, Link, Navigate, useParams } from "react-router-dom";
+
 import InventoryDashboard from "./controllers/InventoryController";
+import InventoryAddView from "./views/InventoryAddView";
+import AddAssetPage from "./views/AddAssetPage";
+import AddHeadendPage from "./views/AddHeadendPage";
+import AddFDHPage from "./views/AddFDHPage";
+import AddSplitterPage from "./views/AddSplitterPage";
 import PlannerDashboard from "./controllers/PlannerController";
 import TechnicianDashboard from "./controllers/TechnicianController";
 import AdminAuditController from "./controllers/AdminAuditController";
 import AdminRolesController from "./controllers/AdminRolesController";
+import "./styles.css";
 
+// Technician route handling
 function TechnicianRoute() {
   const { id } = useParams();
-  const normalizedId = id ? id.toLowerCase() : null;
+  const normalizedId = id ? id.toString().toLowerCase() : null;
   if (normalizedId) return <TechnicianDashboard techIdProp={Number(normalizedId)} />;
 
   const stored = localStorage.getItem("techId");
-  const normalizedStored = stored ? stored.toLowerCase() : null;
+  const normalizedStored = stored ? stored.toString().toLowerCase() : null;
   if (normalizedStored) return <TechnicianDashboard techIdProp={Number(normalizedStored)} />;
 
   return (
@@ -30,44 +38,58 @@ function TechnicianRoute() {
   );
 }
 
-function App() {
+// App routes definition
+function AppRoutes() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-gray-100">
-        <nav className="bg-white shadow p-4 flex justify-between">
-          <h1 className="text-lg font-bold">Network Inventory Management</h1>
-          <div className="space-x-4">
-            <Link to="/inventory" className="text-blue-600 hover:underline">Inventory Manager</Link>
-            <Link to="/planner" className="text-green-600 hover:underline">Planner</Link>
-            <Link to="/technician/1" className="text-indigo-600 hover:underline">Technician</Link>
-            <Link to="/admin/audit" className="text-red-600 hover:underline">Admin Audit</Link>
-            <Link to="/admin/roles" className="text-red-600 hover:underline">Admin Roles</Link>
+    <div className="app-root">
+      <nav className="bg-white shadow p-4 flex justify-between">
+        <div className="app-nav" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h1 className="app-title">Network Inventory</h1>
+            <div className="small-muted">Management Console</div>
           </div>
-        </nav>
+          <div className="nav-links" style={{ display: "flex", gap: 12, marginLeft: 24 }}>
+            <Link to="/inventory" className="btn-link">Inventory</Link>
+            <Link to="/planner" className="btn-link secondary">Planner</Link>
+            <Link to="/technician/1" className="btn-link">Technician</Link>
+            <div className="nav-admin" style={{ marginLeft: 12 }}>
+              <Link to="/admin/audit" className="btn-ghost">Admin Audit</Link>
+              <Link to="/admin/roles" className="btn-ghost">Admin Roles</Link>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-        <main className="p-4">
-          <Routes>
-            <Route path="/" element={<Navigate to="/inventory" replace />} />
-            <Route path="/inventory" element={<InventoryDashboard />} />
-            <Route path="/planner" element={<PlannerDashboard />} />
-            <Route path="/technician/:id" element={<TechnicianRoute />} />
-            <Route path="/technician" element={<TechnicianRoute />} />
-            <Route path="/admin/audit" element={<AdminAuditController />} />
-            <Route path="/admin/roles" element={<AdminRolesController />} />
-            <Route
-              path="*"
-              element={
-                <div className="text-center mt-8">
-                  <h2 className="text-xl font-semibold">404 - Page Not Found</h2>
-                  <Link to="/" className="text-blue-600 underline hover:text-blue-800">Go Home</Link>
-                </div>
-              }
-            />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+      <main className="app-main">
+        <Routes>
+          <Route path="/" element={<Navigate to="/inventory" replace />} />
+          <Route path="/inventory" element={<InventoryDashboard />} />
+          <Route path="/inventory/add" element={<InventoryAddView />} />
+          <Route path="/inventory/add/asset" element={<AddAssetPage />} />
+          <Route path="/inventory/add/headend" element={<AddHeadendPage />} />
+          <Route path="/inventory/add/fdh" element={<AddFDHPage />} />
+          <Route path="/inventory/add/splitter" element={<AddSplitterPage />} />
+          <Route path="/planner" element={<PlannerDashboard />} />
+          <Route path="/technician/:id" element={<TechnicianRoute />} />
+          <Route path="/technician" element={<TechnicianRoute />} />
+          <Route path="/admin/audit" element={<AdminAuditController />} />
+          <Route path="/admin/roles" element={<AdminRolesController />} />
+          <Route
+            path="*"
+            element={
+              <div className="text-center mt-8">
+                <h2 className="text-xl font-semibold">404 - Page Not Found</h2>
+                <Link to="/" className="text-blue-600 underline hover:text-blue-800">Go Home</Link>
+              </div>
+            }
+          />
+        </Routes>
+      </main>
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  // Providers (Router + QueryClientProvider) are set in src/main.jsx — App should only render routes
+  return <AppRoutes />;
+}

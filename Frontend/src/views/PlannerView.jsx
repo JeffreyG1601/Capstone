@@ -1,57 +1,39 @@
 // src/views/PlannerView.jsx
 import React from "react";
 
-export default function PlannerView({ fdhs, splitters, technicians, form, setForm, fetchSplitters, loading, error }) {
+export default function PlannerView({ panel, setPanel, newPanel, pendingPanel, topologyPanel }) {
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Planner — Onboarding</h1>
+      <h1 className="text-2xl font-semibold mb-4">Planner — Onboarding & Pending</h1>
 
-      {error && <div className="mb-3 text-red-600">{error}</div>}
-      {loading && <div className="mb-3">Loading...</div>}
+      <div className="flex gap-3 mb-6">
+        <button
+          className={`px-3 py-1 rounded ${panel==='new' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+          onClick={() => setPanel('new')}
+        >
+          New Customer
+        </button>
 
-      <form className="space-y-3 max-w-2xl">
-        <div>
-          <label className="block text-sm">Customer name</label>
-          <input value={form.name} onChange={e=>setForm(f=>({...f, name: e.target.value}))} className="w-full border px-2 py-1 rounded" />
-        </div>
+        <button
+          className={`px-3 py-1 rounded ${panel==='pending' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+          onClick={() => setPanel('pending')}
+        >
+          Pending Customers
+        </button>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm">Address</label>
-            <input value={form.address} onChange={e=>setForm(f=>({...f, address: e.target.value}))} className="w-full border px-2 py-1 rounded" />
-          </div>
-          <div>
-            <label className="block text-sm">Neighborhood</label>
-            <input value={form.neighborhood} onChange={e=>setForm(f=>({...f, neighborhood: e.target.value}))} className="w-full border px-2 py-1 rounded" />
-          </div>
-        </div>
+        <button
+          className={`px-3 py-1 rounded ${panel==='topology' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+          onClick={() => setPanel('topology')}
+        >
+          Topology (view-only)
+        </button>
+      </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-sm">FDH</label>
-            <select value={form.fdhId} onChange={e => { setForm(f => ({ ...f, fdhId: e.target.value })); fetchSplitters(e.target.value); }} className="w-full border px-2 py-1 rounded">
-              <option value="">Select FDH</option>
-              {fdhs.map(f => <option key={f.fdhId} value={f.fdhId}>{f.name ?? f.displayName} ({f.region ?? f.area})</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm">Splitter</label>
-            <select value={form.splitterId} onChange={e=>setForm(f=>({...f, splitterId: e.target.value}))} className="w-full border px-2 py-1 rounded">
-              <option value="">Select Splitter</option>
-              {splitters.map(s => <option key={s.splitterId} value={s.splitterId}>{s.model ?? (`Splitter ${s.splitterId}`)}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm">Technician</label>
-            <select value={form.technicianId} onChange={e=>setForm(f=>({...f, technicianId: e.target.value}))} className="w-full border px-2 py-1 rounded">
-              <option value="">Select Technician</option>
-              {technicians.map(t => <option key={t.technicianId} value={t.technicianId}>{t.name}</option>)}
-            </select>
-          </div>
-        </div>
-      </form>
+      <div className="bg-white shadow rounded p-4">
+        {panel === 'new' && newPanel}
+        {panel === 'pending' && pendingPanel}
+        {panel === 'topology' && topologyPanel}
+      </div>
     </div>
   );
 }
